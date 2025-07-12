@@ -1,41 +1,57 @@
-# Prerequisites
-*.d
+# === OS-specific ===
+.DS_Store
+Thumbs.db
 
-# Compiled Object files
-*.slo
-*.lo
+# === Compiled object files ===
 *.o
 *.obj
+*.lo
+*.slo
 
-# Precompiled Headers
-*.gch
-*.pch
+# === Compiled static libraries ===
+*.lib
+*.a
+*.la
 
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
+# === Compiled dynamic libraries ===
+*.dll
 *.so
 *.dylib
-*.dll
 
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
+# === Executables ===
 *.exe
 *.out
 *.app
 
-# debug information files
-*.dwo
+# === Build directories ===
+build/
+cmake-build-*/
+
+# === CLion ===
+.idea/
+*.iml
+
+# === Qt Creator ===
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.autosave
+*.creator.*
+*.creator.user.*
+*.creator.user
+
+# === CMake ===
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+install_manifest.txt
+
+# === Logs and dumps ===
+*.log
+
+# === Others ===
+*.swp
+*~
