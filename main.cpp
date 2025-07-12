@@ -6,6 +6,10 @@
 
 using namespace std;
 
+using namespace transport_catalogue;
+using namespace transport_catalogue::input;
+using namespace transport_catalogue::stat;
+
 int main() {
     TransportCatalogue catalogue;
 

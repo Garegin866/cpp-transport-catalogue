@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -6,33 +7,37 @@
 #include "geo.h"
 #include "transport_catalogue.h"
 
-struct CommandDescription {
-    // Определяет, задана ли команда (поле command непустое)
-    explicit operator bool() const {
-        return !command.empty();
-    }
+namespace transport_catalogue::input {
 
-    bool operator!() const {
-        return !operator bool();
-    }
+    struct CommandDescription {
+        // Определяет, задана ли команда (поле command непустое)
+        explicit operator bool() const {
+            return !command.empty();
+        }
 
-    std::string command;      // Название команды
-    std::string id;           // id маршрута или остановки
-    std::string description;  // Параметры команды
-};
+        bool operator!() const {
+            return !operator bool();
+        }
 
-class InputReader {
-public:
-    /**
-     * Парсит строку в структуру CommandDescription и сохраняет результат в commands_
-     */
-    void ParseLine(std::string_view line);
+        std::string command;      // Название команды
+        std::string id;           // id маршрута или остановки
+        std::string description;  // Параметры команды
+    };
 
-    /**
-     * Наполняет данными транспортный справочник, используя команды из commands_
-     */
-    void ApplyCommands(TransportCatalogue& catalogue) const;
+    class InputReader {
+    public:
+        /**
+         * Парсит строку в структуру CommandDescription и сохраняет результат в commands_
+         */
+        void ParseLine(std::string_view line);
 
-private:
-    std::vector<CommandDescription> commands_;
-};
+        /**
+         * Наполняет данными транспортный справочник, используя команды из commands_
+         */
+        void ApplyCommands(TransportCatalogue &catalogue) const;
+
+    private:
+        std::vector<CommandDescription> commands_;
+    };
+
+} // namespace transport_catalogue::input
