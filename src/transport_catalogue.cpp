@@ -8,8 +8,8 @@
 
 namespace transport_catalogue {
 
-    void TransportCatalogue::AddStop(std::string_view name, double lat, double lon) {
-        stops_.emplace_back(Stop{std::string(name), lat, lon});
+    void TransportCatalogue::AddStop(std::string_view name, const geo::Coordinates& coordinates) {
+        stops_.emplace_back(Stop{std::string(name), coordinates});
         stops_index_[stops_.back().name] = &stops_.back();
     }
 
@@ -18,9 +18,14 @@ namespace transport_catalogue {
         return it != stops_index_.end() ? it->second : nullptr;
     }
 
-    void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string>& stops, bool is_roundtrip) {
+    void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& stops, bool is_roundtrip) {
         buses_.emplace_back(Bus{std::string(name), stops, is_roundtrip});
         buses_index_[buses_.back().name] = &buses_.back();
+
+        const Bus* bus_ptr = &buses_.back();
+        for (std::string_view stop_name : stops) {
+            stop_to_buses_[stop_name].insert(bus_ptr);
+        }
     }
 
     [[nodiscard]] const Bus* TransportCatalogue::FindBus(std::string_view name) const {
@@ -42,8 +47,8 @@ namespace transport_catalogue {
             const Stop* prev_stop = FindStop(bus->stops[i - 1]);
             const Stop* curr_stop = FindStop(bus->stops[i]);
             if (prev_stop && curr_stop) {
-                double distance = std::hypot(curr_stop->latitude - prev_stop->latitude,
-                                             curr_stop->longitude - prev_stop->longitude);
+                double distance = std::hypot(curr_stop->coordinates.lat - prev_stop->coordinates.lat,
+                                             curr_stop->coordinates.lng - prev_stop->coordinates.lng);
                 info.route_length += distance;
             }
         }
@@ -51,15 +56,13 @@ namespace transport_catalogue {
         return info;
     }
 
-    [[nodiscard]] std::vector<const Bus*> TransportCatalogue::GetBusesForStop(std::string_view stop_name) const {
-        std::vector<const Bus*> buses;
-        for (const auto& bus_pair : buses_index_) {
-            const Bus* bus = bus_pair.second;
-            if (std::find(bus->stops.begin(), bus->stops.end(), stop_name) != bus->stops.end()) {
-                buses.push_back(bus);
-            }
+    [[nodiscard]] const std::unordered_set<const Bus*>* TransportCatalogue::GetBusesForStop(std::string_view stop_name) const {
+        auto it = stop_to_buses_.find(stop_name);
+        if (it != stop_to_buses_.end()) {
+            return &it->second;
+        } else {
+            return nullptr;
         }
-        return buses;
     }
 
 } // namespace transport_catalogue

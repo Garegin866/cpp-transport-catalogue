@@ -108,7 +108,7 @@ namespace transport_catalogue::input {
         for (const auto &cmd: commands_) {
             if (cmd.command == "Stop") {
                 auto coordinates = ParseCoordinates(cmd.description);
-                catalogue.AddStop(cmd.id, coordinates.lat, coordinates.lng);
+                catalogue.AddStop(cmd.id, coordinates);
             }
         }
 
@@ -116,7 +116,7 @@ namespace transport_catalogue::input {
             if (cmd.command == "Bus") {
                 bool is_roundtrip = cmd.description.find('>') != std::string::npos;
                 auto stops = ParseRoute(cmd.description);
-                std::vector<std::string> stops_vec;
+                std::vector<std::string_view> stops_vec;
                 stops_vec.reserve(stops.size());
                 for (auto stop: stops) {
                     stops_vec.emplace_back(stop);

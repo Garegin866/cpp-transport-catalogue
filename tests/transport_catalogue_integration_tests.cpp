@@ -63,8 +63,8 @@ TEST(TransportCatalogueIntegration, ParseAndPrintStat_BusAndStop) {
 
     TransportCatalogue catalogue;
 
-    catalogue.AddStop("A", 0, 0);
-    catalogue.AddStop("B", 3, 4);
+    catalogue.AddStop("A", {0, 0});
+    catalogue.AddStop("B", {3, 4});
 
     catalogue.AddBus("Bus1", {"A", "B"}, false);
 

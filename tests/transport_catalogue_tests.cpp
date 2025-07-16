@@ -10,12 +10,12 @@ TEST(TransportCatalogueTest, AddAndFindStop) {
 
     TransportCatalogue catalogue;
 
-    catalogue.AddStop("A", 10.0, 20.0);
+    catalogue.AddStop("A", {10.0, 20.0});
     const Stop* stop = catalogue.FindStop("A");
 
     ASSERT_NE(stop, nullptr);
-    EXPECT_DOUBLE_EQ(stop->latitude, 10.0);
-    EXPECT_DOUBLE_EQ(stop->longitude, 20.0);
+    EXPECT_DOUBLE_EQ(stop->coordinates.lat, 10.0);
+    EXPECT_DOUBLE_EQ(stop->coordinates.lng, 20.0);
 
     EXPECT_EQ(catalogue.FindStop("Unknown"), nullptr);
 }
@@ -25,8 +25,8 @@ TEST(TransportCatalogueTest, AddBusAndGetInfo) {
 
     TransportCatalogue catalogue;
 
-    catalogue.AddStop("A", 0, 0);
-    catalogue.AddStop("B", 3, 4);  // Distance 5
+    catalogue.AddStop("A", {0, 0});
+    catalogue.AddStop("B", {3, 4});  // Distance 5
     catalogue.AddBus("Bus1", {"A", "B", "A"}, true);
 
     BusInfo info = catalogue.GetBusInfo("Bus1");
@@ -41,16 +41,16 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
 
     TransportCatalogue catalogue;
 
-    catalogue.AddStop("Stop1", 0, 0);
-    catalogue.AddStop("Stop2", 1, 1);
+    catalogue.AddStop("Stop1", {0, 0});
+    catalogue.AddStop("Stop2", {1, 1});
 
     catalogue.AddBus("BusA", {"Stop1", "Stop2"}, false);
     catalogue.AddBus("BusB", {"Stop1"}, false);
 
     auto buses = catalogue.GetBusesForStop("Stop1");
     std::vector<std::string> bus_names;
-    bus_names.reserve(buses.size());
-    for (auto bus : buses) {
+    bus_names.reserve(buses->size());
+    for (const Bus* bus : *buses) {
         bus_names.push_back(bus->name);
     }
     std::sort(bus_names.begin(), bus_names.end());
@@ -59,7 +59,7 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
     EXPECT_EQ(bus_names[0], "BusA");
     EXPECT_EQ(bus_names[1], "BusB");
 
-    EXPECT_TRUE(catalogue.GetBusesForStop("NoStop").empty());
+    EXPECT_TRUE(catalogue.GetBusesForStop("NoStop") == nullptr);
 }
 
 int main(int argc, char** argv) {

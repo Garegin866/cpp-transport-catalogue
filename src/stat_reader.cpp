@@ -54,8 +54,8 @@ namespace transport_catalogue::stat {
                 const auto& prev_stop = transport_catalogue.FindStop(bus->stops[i - 1]);
                 const auto& curr_stop = transport_catalogue.FindStop(bus->stops[i]);
                 if (prev_stop && curr_stop) {
-                    route_length += transport_catalogue::geo::ComputeDistance({prev_stop->latitude, prev_stop->longitude},
-                                                                              {curr_stop->latitude, curr_stop->longitude});
+                    route_length += transport_catalogue::geo::ComputeDistance({prev_stop->coordinates.lat, prev_stop->coordinates.lng},
+                                                                              {curr_stop->coordinates.lat, curr_stop->coordinates.lng});
                 }
             }
 
@@ -64,6 +64,7 @@ namespace transport_catalogue::stat {
                    << unique_stops_count << " unique stops, "
                    << std::setprecision(6) << route_length << " route length\n";
         }
+
         void PrintStopStat(const transport_catalogue::TransportCatalogue& transport_catalogue, std::string_view request, std::ostream& output) {
             constexpr std::string_view prefix = "Stop ";
             if (request.substr(0, prefix.size()) != prefix) {
@@ -79,17 +80,18 @@ namespace transport_catalogue::stat {
             }
 
             auto buses = transport_catalogue.GetBusesForStop(stop_name);
-
-            if (buses.empty()) {
+            if (!buses || buses->empty()) {
                 output << prefix << stop_name << ": no buses\n";
             } else {
-                std::sort(buses.begin(), buses.end(), [](const transport_catalogue::Bus* lhs, const transport_catalogue::Bus* rhs) {
-                    return lhs->name < rhs->name;
-                });
+                std::vector<std::string_view> bus_names;
+                for (const Bus* bus : *buses) {
+                    bus_names.push_back(bus->name);
+                }
+                std::sort(bus_names.begin(), bus_names.end());
 
                 output << prefix << stop_name << ": buses";
-                for (const auto* bus : buses) {
-                    output << " " << bus->name;
+                for (auto name : bus_names) {
+                    output << " " << name;
                 }
                 output << "\n";
             }
