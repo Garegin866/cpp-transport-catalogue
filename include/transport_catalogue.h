@@ -45,7 +45,7 @@ namespace transport_catalogue {
         [[nodiscard]] BusInfo GetBusInfo(std::string_view name) const;
 
         // Returns a list of buses that pass through a given stop.
-        [[nodiscard]] const std::unordered_set<const Bus*>* GetBusesForStop(std::string_view stop_name) const;
+        [[nodiscard]] const std::unordered_set<const Bus*>& GetBusesForStop(std::string_view stop_name) const;
 
     private:
         std::unordered_map<std::string_view, const Stop *> stops_index_;

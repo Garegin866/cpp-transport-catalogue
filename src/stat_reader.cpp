@@ -79,18 +79,18 @@ namespace transport_catalogue::stat {
                 return;
             }
 
-            auto buses = transport_catalogue.GetBusesForStop(stop_name);
-            if (!buses || buses->empty()) {
+            const auto& buses = transport_catalogue.GetBusesForStop(stop_name);
+            if (buses.empty()) {
                 output << prefix << stop_name << ": no buses\n";
             } else {
                 std::vector<std::string_view> bus_names;
-                for (const Bus* bus : *buses) {
+                bus_names.reserve(buses.size());
+                for (const auto* bus : buses) {
                     bus_names.push_back(bus->name);
                 }
                 std::sort(bus_names.begin(), bus_names.end());
-
                 output << prefix << stop_name << ": buses";
-                for (auto name : bus_names) {
+                for (const auto& name : bus_names) {
                     output << " " << name;
                 }
                 output << "\n";

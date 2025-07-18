@@ -56,13 +56,14 @@ namespace transport_catalogue {
         return info;
     }
 
-    [[nodiscard]] const std::unordered_set<const Bus*>* TransportCatalogue::GetBusesForStop(std::string_view stop_name) const {
+    [[nodiscard]] const std::unordered_set<const Bus*>& TransportCatalogue::GetBusesForStop(std::string_view stop_name) const {
+        static const std::unordered_set<const Bus*> empty_result;
+
         auto it = stop_to_buses_.find(stop_name);
         if (it != stop_to_buses_.end()) {
-            return &it->second;
-        } else {
-            return nullptr;
+            return it->second;
         }
+        return empty_result;
     }
 
 } // namespace transport_catalogue

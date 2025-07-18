@@ -47,10 +47,10 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
     catalogue.AddBus("BusA", {"Stop1", "Stop2"}, false);
     catalogue.AddBus("BusB", {"Stop1"}, false);
 
-    auto buses = catalogue.GetBusesForStop("Stop1");
+    const auto& buses = catalogue.GetBusesForStop("Stop1");
     std::vector<std::string> bus_names;
-    bus_names.reserve(buses->size());
-    for (const Bus* bus : *buses) {
+    bus_names.reserve(buses.size());
+    for (const Bus* bus : buses) {
         bus_names.push_back(bus->name);
     }
     std::sort(bus_names.begin(), bus_names.end());
@@ -59,7 +59,8 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
     EXPECT_EQ(bus_names[0], "BusA");
     EXPECT_EQ(bus_names[1], "BusB");
 
-    EXPECT_TRUE(catalogue.GetBusesForStop("NoStop") == nullptr);
+    const auto& empty_buses = catalogue.GetBusesForStop("Unknown");
+    EXPECT_TRUE(empty_buses.empty());
 }
 
 int main(int argc, char** argv) {
