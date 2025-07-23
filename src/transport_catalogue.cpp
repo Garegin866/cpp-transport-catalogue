@@ -4,7 +4,6 @@
 #include <vector>
 #include <unordered_set>
 #include <cmath>
-#include <algorithm>
 
 namespace transport_catalogue {
 
@@ -18,13 +17,15 @@ namespace transport_catalogue {
         return it != stops_index_.end() ? it->second : nullptr;
     }
 
-    void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& stops, bool is_roundtrip) {
+    void TransportCatalogue::AddBus(std::string_view name, const std::vector<const Stop*>& stops, bool is_roundtrip) {
         buses_.emplace_back(Bus{std::string(name), stops, is_roundtrip});
         buses_index_[buses_.back().name] = &buses_.back();
 
         const Bus* bus_ptr = &buses_.back();
-        for (std::string_view stop_name : stops) {
-            stop_to_buses_[stop_name].insert(bus_ptr);
+        for (const Stop* stop : stops) {
+            if (stop) {
+                stop_to_buses_[stop].insert(bus_ptr);
+            }
         }
     }
 
@@ -41,11 +42,11 @@ namespace transport_catalogue {
 
         BusInfo info;
         info.stops_count = bus->stops.size();
-        info.unique_stops_count = std::unordered_set<std::string>(bus->stops.begin(), bus->stops.end()).size();
+        info.unique_stops_count = std::unordered_set<const Stop*>(bus->stops.begin(), bus->stops.end()).size();
 
         for (size_t i = 1; i < bus->stops.size(); ++i) {
-            const Stop* prev_stop = FindStop(bus->stops[i - 1]);
-            const Stop* curr_stop = FindStop(bus->stops[i]);
+            const Stop* prev_stop = bus->stops[i - 1];
+            const Stop* curr_stop = bus->stops[i];
             if (prev_stop && curr_stop) {
                 double distance = std::hypot(curr_stop->coordinates.lat - prev_stop->coordinates.lat,
                                              curr_stop->coordinates.lng - prev_stop->coordinates.lng);
@@ -56,14 +57,35 @@ namespace transport_catalogue {
         return info;
     }
 
-    [[nodiscard]] const std::unordered_set<const Bus*>& TransportCatalogue::GetBusesForStop(std::string_view stop_name) const {
-        static const std::unordered_set<const Bus*> empty_result;
-
-        auto it = stop_to_buses_.find(stop_name);
+    [[nodiscard]] const std::unordered_set<const Bus*>& TransportCatalogue::GetBusesForStop(const Stop* stop) const {
+        auto it = stop_to_buses_.find(stop);
         if (it != stop_to_buses_.end()) {
             return it->second;
         }
-        return empty_result;
+        static const std::unordered_set<const Bus*> empty_set;
+        return empty_set;
+    }
+
+    void TransportCatalogue::SetDistance(const Stop* from, const Stop* to, double distance) {
+        if (from && to) {
+            distances_[{from, to}] = distance;
+        }
+    }
+
+    double TransportCatalogue::GetDistance(const Stop* from, const Stop* to) const {
+        if (from && to) {
+            auto it = distances_.find({from, to});
+            if (it != distances_.end()) {
+                return it->second;
+            }
+
+            // If the distance is not found, check the reverse direction
+            it = distances_.find({to, from});
+            if (it != distances_.end()) {
+                return it->second;
+            }
+        }
+        return 0.0; // Return 0 if distance is not set
     }
 
 } // namespace transport_catalogue

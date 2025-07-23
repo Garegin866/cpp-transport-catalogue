@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <iostream>
 
 namespace transport_catalogue::input {
 
@@ -104,11 +105,59 @@ namespace transport_catalogue::input {
         }
     }
 
-    void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue &catalogue) const {
+    struct DeferredDistance {
+        std::string_view from;
+        std::string_view to;
+        double distance;
+    };
+
+    std::vector<DeferredDistance> ParseDistances(std::string_view from_stop, std::string_view description) {
+        std::vector<DeferredDistance> result;
+
+        while (!description.empty()) {
+            auto m_pos = description.find("m to ");
+            if (m_pos == std::string_view::npos) {
+                break;
+            }
+
+            size_t dist_start = description.find_last_of(", ", m_pos);
+            if (dist_start == std::string_view::npos || description[dist_start] == ',') {
+                dist_start = 0;
+            } else {
+                dist_start += 1;
+            }
+
+            const double distance = std::stod(std::string(Trim(description.substr(dist_start, m_pos - dist_start))));
+
+            std::string_view after_m_to = description.substr(m_pos + 5);
+            size_t next_comma = after_m_to.find(',');
+
+            std::string_view to_stop = Trim(after_m_to.substr(0, next_comma));
+            result.push_back({from_stop, to_stop, distance});
+
+            if (next_comma == std::string_view::npos) break;
+            description = after_m_to.substr(next_comma + 1);
+        }
+
+        return result;
+    }
+
+    void InputReader::ApplyCommands(TransportCatalogue &catalogue) const {
+        std::vector<DeferredDistance> deferred_distances;
+
         for (const auto &cmd: commands_) {
             if (cmd.command == "Stop") {
                 auto coordinates = ParseCoordinates(cmd.description);
                 catalogue.AddStop(cmd.id, coordinates);
+
+                std::string_view desc_view = cmd.description;
+                auto second_comma = cmd.description.find(',', cmd.description.find(',') + 1);
+                std::string_view distances_part = desc_view.substr(second_comma + 1);
+
+                if (second_comma != std::string::npos) {
+                    auto distances = ParseDistances(cmd.id, distances_part);
+                    deferred_distances.insert(deferred_distances.end(), distances.begin(), distances.end());
+                }
             }
         }
 
@@ -116,12 +165,28 @@ namespace transport_catalogue::input {
             if (cmd.command == "Bus") {
                 bool is_roundtrip = cmd.description.find('>') != std::string::npos;
                 auto stops = ParseRoute(cmd.description);
-                std::vector<std::string_view> stops_vec;
-                stops_vec.reserve(stops.size());
-                for (auto stop: stops) {
-                    stops_vec.emplace_back(stop);
+                std::vector<const Stop *> stop_ptrs;
+                stop_ptrs.reserve(stops.size());
+                for (const auto &stop_name: stops) {
+                    const Stop *stop = catalogue.FindStop(stop_name);
+                    if (stop) {
+                        stop_ptrs.push_back(stop);
+                    } else {
+                        std::cerr << "Warning: Stop '" << stop_name << "' not found for bus '" << cmd.id << "'." << std::endl;
+                    }
                 }
-                catalogue.AddBus(cmd.id, stops_vec, is_roundtrip);
+                catalogue.AddBus(cmd.id, stop_ptrs, is_roundtrip);
+            }
+        }
+
+        for (const auto &dist: deferred_distances) {
+            const auto *from_stop = catalogue.FindStop(dist.from);
+            const auto *to_stop = catalogue.FindStop(dist.to);
+            if (from_stop && to_stop) {
+                catalogue.SetDistance(from_stop, to_stop, dist.distance);
+            } else {
+                std::cerr << "Warning: Distance from '" << dist.from << "' to '" << dist.to
+                          << "' could not be set due to missing stops." << std::endl;
             }
         }
     }

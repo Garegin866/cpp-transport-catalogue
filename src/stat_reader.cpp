@@ -43,26 +43,42 @@ namespace transport_catalogue::stat {
 
             int stops_count = static_cast<int>(bus->stops.size());
 
-            std::unordered_set<std::string_view> unique_stops;
-            for (const auto& stop : bus->stops) {
-                unique_stops.insert(stop);
+            std::unordered_set<const transport_catalogue::Stop*> unique_stops;
+            for (const auto* stop : bus->stops) {
+                if (stop) {
+                    unique_stops.insert(stop);
+                }
             }
             int unique_stops_count = static_cast<int>(unique_stops.size());
 
-            double route_length = 0.0;
+            double actual_road_distance = 0.0;
+            double geo_distance = 0.0;
+
             for (size_t i = 1; i < bus->stops.size(); ++i) {
-                const auto& prev_stop = transport_catalogue.FindStop(bus->stops[i - 1]);
-                const auto& curr_stop = transport_catalogue.FindStop(bus->stops[i]);
+                const transport_catalogue::Stop* prev_stop = bus->stops[i - 1];
+                const transport_catalogue::Stop* curr_stop = bus->stops[i];
                 if (prev_stop && curr_stop) {
-                    route_length += transport_catalogue::geo::ComputeDistance({prev_stop->coordinates.lat, prev_stop->coordinates.lng},
-                                                                              {curr_stop->coordinates.lat, curr_stop->coordinates.lng});
+                    geo_distance += transport_catalogue::geo::ComputeDistance(
+                        {prev_stop->coordinates.lat, prev_stop->coordinates.lng},
+                        {curr_stop->coordinates.lat, curr_stop->coordinates.lng}
+                    );
+                    double dist = transport_catalogue.GetDistance(prev_stop, curr_stop);
+                    if (dist >= 0) {
+                        actual_road_distance += dist;
+                    } else {
+                        std::cerr << "Warning: Distance between stops '" << prev_stop->name
+                                  << "' and '" << curr_stop->name << "' is not set.\n";
+                    }
                 }
             }
+            double curvature = actual_road_distance == 0.0 ? 0.0 : actual_road_distance / geo_distance;
 
             output << prefix << bus_name << ": "
                    << stops_count << " stops on route, "
                    << unique_stops_count << " unique stops, "
-                   << std::setprecision(6) << route_length << " route length\n";
+                   << std::setprecision(6) << actual_road_distance << " route length, "
+                   << curvature << " curvature\n";
+
         }
 
         void PrintStopStat(const transport_catalogue::TransportCatalogue& transport_catalogue, std::string_view request, std::ostream& output) {
@@ -79,7 +95,7 @@ namespace transport_catalogue::stat {
                 return;
             }
 
-            const auto& buses = transport_catalogue.GetBusesForStop(stop_name);
+            const auto& buses = transport_catalogue.GetBusesForStop(stop);
             if (buses.empty()) {
                 output << prefix << stop_name << ": no buses\n";
             } else {

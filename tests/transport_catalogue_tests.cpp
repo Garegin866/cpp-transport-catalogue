@@ -26,8 +26,14 @@ TEST(TransportCatalogueTest, AddBusAndGetInfo) {
     TransportCatalogue catalogue;
 
     catalogue.AddStop("A", {0, 0});
-    catalogue.AddStop("B", {3, 4});  // Distance 5
-    catalogue.AddBus("Bus1", {"A", "B", "A"}, true);
+    catalogue.AddStop("B", {3, 4});
+
+    const Stop* stop_a = catalogue.FindStop("A");
+    const Stop* stop_b = catalogue.FindStop("B");
+    ASSERT_NE(stop_a, nullptr);
+    ASSERT_NE(stop_b, nullptr);
+
+    catalogue.AddBus("Bus1", {stop_a, stop_b, stop_a}, true);
 
     BusInfo info = catalogue.GetBusInfo("Bus1");
 
@@ -44,10 +50,15 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
     catalogue.AddStop("Stop1", {0, 0});
     catalogue.AddStop("Stop2", {1, 1});
 
-    catalogue.AddBus("BusA", {"Stop1", "Stop2"}, false);
-    catalogue.AddBus("BusB", {"Stop1"}, false);
+    const Stop* stop1 = catalogue.FindStop("Stop1");
+    const Stop* stop2 = catalogue.FindStop("Stop2");
+    ASSERT_NE(stop1, nullptr);
+    ASSERT_NE(stop2, nullptr);
 
-    const auto& buses = catalogue.GetBusesForStop("Stop1");
+    catalogue.AddBus("BusA", {stop1, stop2}, false);
+    catalogue.AddBus("BusB", {stop1}, false);
+
+    const auto& buses = catalogue.GetBusesForStop(stop1);
     std::vector<std::string> bus_names;
     bus_names.reserve(buses.size());
     for (const Bus* bus : buses) {
@@ -59,7 +70,7 @@ TEST(TransportCatalogueTest, GetBusesForStop) {
     EXPECT_EQ(bus_names[0], "BusA");
     EXPECT_EQ(bus_names[1], "BusB");
 
-    const auto& empty_buses = catalogue.GetBusesForStop("Unknown");
+    const auto& empty_buses = catalogue.GetBusesForStop(catalogue.FindStop("Unknown"));
     EXPECT_TRUE(empty_buses.empty());
 }
 
