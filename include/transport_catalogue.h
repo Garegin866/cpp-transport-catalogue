@@ -32,6 +32,9 @@ namespace transport_catalogue {
         // Finds a bus by its name.
         [[nodiscard]] const Bus *FindBus(std::string_view name) const;
 
+        // Returns bus information if it exists, otherwise returns std::nullopt.
+        [[nodiscard]] std::optional<BusInfo> GetBusInfo(const std::string_view& bus_name) const;
+
         // Returns a list of buses that pass through a given stop.
         [[nodiscard]] const std::unordered_set<const Bus*>& GetBusesForStop(const Stop *stop) const;
 

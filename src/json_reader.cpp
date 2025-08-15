@@ -96,7 +96,7 @@ namespace transport_catalogue {
             json::Node response_node;
 
             if (req.type == BUS_TYPE) {
-                auto bus_info = handler.GetBusStat(req.name);
+                auto bus_info = handler.GetBusInfo(req.name);
                 if (bus_info) {
                     response_node = json::Dict{
                         {"request_id", req.id},

@@ -13,7 +13,7 @@ namespace transport_catalogue {
         RequestHandler(const TransportCatalogue& db, const renderer::MapRenderer& renderer);
 
         // Возвращает информацию о маршруте (запрос Bus)
-        [[nodiscard]] std::optional<BusInfo> GetBusStat(const std::string_view& bus_name) const;
+        [[nodiscard]] std::optional<BusInfo> GetBusInfo(const std::string_view& bus_name) const;
 
         // Возвращает маршруты, проходящие через
         [[nodiscard]] const std::unordered_set<const Bus*>* GetBusesByStop(const std::string_view& stop_name) const;
