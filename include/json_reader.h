@@ -19,7 +19,7 @@ namespace transport_catalogue {
         [[nodiscard]] json::Array ProcessStatRequests(const RequestHandler& handler) const;
 
         // Read render settings from the input document
-        void ReadRenderSettings(renderer::MapRenderer& renderer);
+        void ProcessRenderSettings(renderer::MapRenderer& renderer);
 
     private:
         TransportCatalogue& db_;
@@ -47,6 +47,9 @@ namespace transport_catalogue {
 
         void ParseBaseRequests(const json::Array& reqs);
         void ParseStatRequests(const json::Array& reqs);
+
+        void ParseStopRequests(const json::Dict& dict);
+        void ParseBusRequests(const json::Dict& dict);
 
         std::vector<StopInput> stops_;
         std::vector<BusInput> buses_;

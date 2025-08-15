@@ -19,7 +19,7 @@ int main() {
     reader.ProcessBaseRequests();
 
     renderer::MapRenderer renderer;
-    reader.ReadRenderSettings(renderer);
+    reader.ProcessRenderSettings(renderer);
 
     RequestHandler handler(catalogue, renderer);
 

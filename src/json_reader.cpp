@@ -154,7 +154,7 @@ namespace transport_catalogue {
         return responses;
     }
 
-    void JsonReader::ReadRenderSettings(renderer::MapRenderer& renderer) {
+    void JsonReader::ProcessRenderSettings(renderer::MapRenderer& renderer) {
         const auto& root = input_doc_.GetRoot().AsMap();
         auto it_rs = root.find(RENDER_SETTINGS_KEY);
         if (it_rs == root.end()) return; // nothing to render
@@ -162,29 +162,49 @@ namespace transport_catalogue {
         const auto& rs = it_rs->second.AsMap();
         renderer::RenderSettings s{};   // have sensible defaults in this struct
 
-        if (auto p = TryGet(rs, "width"))        s.width = p->AsDouble();
-        if (auto p = TryGet(rs, "height"))       s.height = p->AsDouble();
-        if (auto p = TryGet(rs, "padding"))      s.padding = p->AsDouble();
-        if (auto p = TryGet(rs, "line_width"))   s.line_width = p->AsDouble();
-        if (auto p = TryGet(rs, "stop_radius"))  s.stop_radius = p->AsDouble();
-
-        if (auto p = TryGet(rs, "bus_label_font_size")) s.bus_label_font_size = p->AsInt();
+        if (auto p = TryGet(rs, "width")) {
+            s.width = p->AsDouble();
+        }
+        if (auto p = TryGet(rs, "height")) {
+            s.height = p->AsDouble();
+        }
+        if (auto p = TryGet(rs, "padding")) {
+            s.padding = p->AsDouble();
+        }
+        if (auto p = TryGet(rs, "line_width")) {
+            s.line_width = p->AsDouble();
+        }
+        if (auto p = TryGet(rs, "stop_radius")) {
+            s.stop_radius = p->AsDouble();
+        }
+        if (auto p = TryGet(rs, "bus_label_font_size")) {
+            s.bus_label_font_size = p->AsInt();
+        }
         if (auto p = TryGet(rs, "bus_label_offset")) {
             const auto& a = p->AsArray();
-            if (a.size() >= 2) s.bus_label_offset = {a[0].AsDouble(), a[1].AsDouble()};
+            if (a.size() >= 2) {
+                s.bus_label_offset = { a[0].AsDouble(), a[1].AsDouble() };
+            }
         }
-
-        if (auto p = TryGet(rs, "stop_label_font_size")) s.stop_label_font_size = p->AsInt();
+        if (auto p = TryGet(rs, "stop_label_font_size")) {
+            s.stop_label_font_size = p->AsInt();
+        }
         if (auto p = TryGet(rs, "stop_label_offset")) {
             const auto& a = p->AsArray();
-            if (a.size() >= 2) s.stop_label_offset = {a[0].AsDouble(), a[1].AsDouble()};
+            if (a.size() >= 2) {
+                s.stop_label_offset = { a[0].AsDouble(), a[1].AsDouble() };
+            }
         }
-
-        if (auto p = TryGet(rs, "underlayer_color")) s.underlayer_color = ParseColorNode(*p);
-        if (auto p = TryGet(rs, "underlayer_width")) s.underlayer_width = p->AsDouble();
-
+        if (auto p = TryGet(rs, "underlayer_color")) {
+            s.underlayer_color = ParseColorNode(*p);
+        }
+        if (auto p = TryGet(rs, "underlayer_width")) {
+            s.underlayer_width = p->AsDouble();
+        }
         if (auto p = TryGet(rs, "color_palette")) {
-            for (const auto& c : p->AsArray()) s.color_palette.push_back(ParseColorNode(c));
+            for (const auto& c : p->AsArray()) {
+                s.color_palette.push_back(ParseColorNode(c));
+            }
         }
 
         renderer.SetSettings(std::move(s));
@@ -200,50 +220,9 @@ namespace transport_catalogue {
             const std::string type = type_n->AsString();
 
             if (type == STOP_TYPE) {
-                const auto *name_n = TryGet(m, NAME_KEY),
-                        *lat_n  = TryGet(m, LATITUDE_KEY),
-                        *lng_n  = TryGet(m, LONGITUDE_KEY);
-                if (!name_n || !lat_n || !lng_n || !name_n->IsString() || !lat_n->IsDouble() || !lng_n->IsDouble()) {
-                    continue;
-                }
-
-                StopInput s;
-                s.name   = name_n->AsString();
-                s.coords = { lat_n->AsDouble(), lng_n->AsDouble() };
-
-                if (auto rd_it = m.find("road_distances"); rd_it != m.end() && rd_it->second.IsMap()) {
-                    for (const auto& [to_name, dist_node] : rd_it->second.AsMap()) {
-                        if (dist_node.IsInt()) {
-                            s.road_distances[to_name] = dist_node.AsInt();
-                        } else if (dist_node.IsDouble()) {
-                            s.road_distances[to_name] = static_cast<int>(dist_node.AsDouble());
-                        }
-                    }
-                }
-
-                stops_.push_back(std::move(s));
+                ParseStopRequests(m);
             } else if (type == BUS_TYPE) {
-                const auto* name_n = TryGet(m, NAME_KEY);
-                if (!name_n || !name_n->IsString()) continue;
-
-                BusInput b;
-                b.name = name_n->AsString();
-
-                if (const auto* rt = TryGet(m, "is_roundtrip"); rt && rt->IsBool()) {
-                    b.is_roundtrip = rt->AsBool();
-                } else {
-                    b.is_roundtrip = false;
-                }
-
-                if (const auto* stops_n = TryGet(m, "stops"); stops_n && stops_n->IsArray()) {
-                    const auto& arr = stops_n->AsArray();
-                    b.stops.reserve(arr.size());
-                    for (const auto& s : arr) {
-                        if (s.IsString()) b.stops.push_back(s.AsString());
-                    }
-                }
-
-                buses_.push_back(std::move(b));
+                ParseBusRequests(m);
             }
         }
     }
@@ -266,6 +245,55 @@ namespace transport_catalogue {
 
             stat_requests_.push_back(std::move(stat_request));
         }
+    }
+
+    void JsonReader::ParseStopRequests(const json::Dict& dict) {
+        const auto* name_n = TryGet(dict, NAME_KEY);
+        const auto* lat_n  = TryGet(dict, LATITUDE_KEY);
+        const auto* lng_n  = TryGet(dict, LONGITUDE_KEY);
+        if (!name_n || !lat_n || !lng_n || !name_n->IsString() || !lat_n->IsDouble() || !lng_n->IsDouble()) {
+            return;
+        }
+
+        StopInput s;
+        s.name   = name_n->AsString();
+        s.coords = { lat_n->AsDouble(), lng_n->AsDouble() };
+
+        if (auto rd_it = dict.find("road_distances"); rd_it != dict.end() && rd_it->second.IsMap()) {
+            for (const auto& [to_name, dist_node] : rd_it->second.AsMap()) {
+                if (dist_node.IsInt()) {
+                    s.road_distances[to_name] = dist_node.AsInt();
+                } else if (dist_node.IsDouble()) {
+                    s.road_distances[to_name] = static_cast<int>(dist_node.AsDouble());
+                }
+            }
+        }
+
+        stops_.push_back(std::move(s));
+    }
+
+    void JsonReader::ParseBusRequests(const json::Dict& dict) {
+        const auto* name_n = TryGet(dict, NAME_KEY);
+        if (!name_n || !name_n->IsString()) return;
+
+        BusInput b;
+        b.name = name_n->AsString();
+
+        if (const auto* rt = TryGet(dict, "is_roundtrip"); rt && rt->IsBool()) {
+            b.is_roundtrip = rt->AsBool();
+        } else {
+            b.is_roundtrip = false;
+        }
+
+        if (const auto* stops_n = TryGet(dict, "stops"); stops_n && stops_n->IsArray()) {
+            const auto& arr = stops_n->AsArray();
+            b.stops.reserve(arr.size());
+            for (const auto& s : arr) {
+                if (s.IsString()) b.stops.push_back(s.AsString());
+            }
+        }
+
+        buses_.push_back(std::move(b));
     }
 
 } // namespace transport_catalogue
