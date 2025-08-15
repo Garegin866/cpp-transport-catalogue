@@ -1,77 +1,87 @@
-#include "transport_catalogue.h"
-
+// tests_basic.cpp
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
-#include <algorithm>
 
-TEST(TransportCatalogueTest, AddAndFindStop) {
-    using namespace transport_catalogue;
+#include "transport_catalogue.h"
+#include "geo.h"
 
-    TransportCatalogue catalogue;
+using namespace transport_catalogue;
 
-    catalogue.AddStop("A", {10.0, 20.0});
-    const Stop* stop = catalogue.FindStop("A");
+TEST(TransportCatalogue, AddAndFindStop) {
+    TransportCatalogue tc;
 
-    ASSERT_NE(stop, nullptr);
-    EXPECT_DOUBLE_EQ(stop->coordinates.lat, 10.0);
-    EXPECT_DOUBLE_EQ(stop->coordinates.lng, 20.0);
+    geo::Coordinates a{55.0, 37.0};
+    geo::Coordinates b{59.9, 30.3};
 
-    EXPECT_EQ(catalogue.FindStop("Unknown"), nullptr);
+    tc.AddStop("A", a);
+    tc.AddStop("B", b);
+
+    const Stop* sa = tc.FindStop("A");
+    const Stop* sb = tc.FindStop("B");
+    const Stop* sn = tc.FindStop("NoSuchStop");
+
+    ASSERT_NE(sa, nullptr);
+    ASSERT_NE(sb, nullptr);
+    EXPECT_EQ(sa->name, "A");
+    EXPECT_EQ(sb->name, "B");
+    EXPECT_EQ(sa->coordinates.lat, a.lat);
+    EXPECT_EQ(sa->coordinates.lng, a.lng);
+    EXPECT_EQ(sn, nullptr);
 }
 
-TEST(TransportCatalogueTest, AddBusAndGetInfo) {
-    using namespace transport_catalogue;
+TEST(TransportCatalogue, SetAndGetDistance) {
+    TransportCatalogue tc;
 
-    TransportCatalogue catalogue;
+    tc.AddStop("A", {55.0, 37.0});
+    tc.AddStop("B", {59.9, 30.3});
 
-    catalogue.AddStop("A", {0, 0});
-    catalogue.AddStop("B", {3, 4});
+    const Stop* sa = tc.FindStop("A");
+    const Stop* sb = tc.FindStop("B");
 
-    const Stop* stop_a = catalogue.FindStop("A");
-    const Stop* stop_b = catalogue.FindStop("B");
-    ASSERT_NE(stop_a, nullptr);
-    ASSERT_NE(stop_b, nullptr);
+    tc.SetDistance(sa, sb, 1234.0);
 
-    catalogue.AddBus("Bus1", {stop_a, stop_b, stop_a}, true);
+    // Stored direction
+    EXPECT_DOUBLE_EQ(tc.GetDistance(sa, sb), 1234.0);
 
-    BusInfo info = catalogue.GetBusInfo("Bus1");
-
-    EXPECT_EQ(info.stops_count, 3);
-    EXPECT_EQ(info.unique_stops_count, 2);
-    EXPECT_NEAR(info.route_length, 10.0, 1e-6);
+    // If your GetDistance implements reverse fallback, check it here.
+    // If not, replace with EXPECT_DOUBLE_EQ(tc.GetDistance(sb, sa), 0.0);
+    // (depends on your implementation contract)
+    EXPECT_DOUBLE_EQ(tc.GetDistance(sb, sa), 1234.0);
 }
 
-TEST(TransportCatalogueTest, GetBusesForStop) {
-    using namespace transport_catalogue;
+TEST(TransportCatalogue, BusesByStopIndexing) {
+    TransportCatalogue tc;
 
-    TransportCatalogue catalogue;
+    tc.AddStop("A", {0.0, 0.0});
+    tc.AddStop("B", {1.0, 1.0});
+    tc.AddStop("C", {2.0, 2.0});
 
-    catalogue.AddStop("Stop1", {0, 0});
-    catalogue.AddStop("Stop2", {1, 1});
+    const Stop* sa = tc.FindStop("A");
+    const Stop* sb = tc.FindStop("B");
+    const Stop* sc = tc.FindStop("C");
 
-    const Stop* stop1 = catalogue.FindStop("Stop1");
-    const Stop* stop2 = catalogue.FindStop("Stop2");
-    ASSERT_NE(stop1, nullptr);
-    ASSERT_NE(stop2, nullptr);
+    // Add two buses passing A
+    tc.AddBus("10", std::vector<const Stop*>{sa, sb}, false);
+    tc.AddBus("20", std::vector<const Stop*>{sa, sc}, true);
 
-    catalogue.AddBus("BusA", {stop1, stop2}, false);
-    catalogue.AddBus("BusB", {stop1}, false);
+    // A has both buses
+    const auto& buses_at_a = tc.GetBusesForStop(sa);
+    ASSERT_EQ(buses_at_a.size(), 2u);
 
-    const auto& buses = catalogue.GetBusesForStop(stop1);
-    std::vector<std::string> bus_names;
-    bus_names.reserve(buses.size());
-    for (const Bus* bus : buses) {
-        bus_names.push_back(bus->name);
-    }
-    std::sort(bus_names.begin(), bus_names.end());
+    // B has only "10"
+    const auto& buses_at_b = tc.GetBusesForStop(sb);
+    ASSERT_EQ(buses_at_b.size(), 1u);
+    EXPECT_EQ((*buses_at_b.begin())->name, "10");
 
-    EXPECT_EQ(bus_names.size(), 2u);
-    EXPECT_EQ(bus_names[0], "BusA");
-    EXPECT_EQ(bus_names[1], "BusB");
+    // Nonexistent stop yields empty set (by contract your impl returns a reference to a static empty set)
+    const Stop bogus{"X", {0,0}};
+    const auto& empty_ref = tc.GetBusesForStop(&bogus);
+    EXPECT_TRUE(empty_ref.empty());
+}
 
-    const auto& empty_buses = catalogue.GetBusesForStop(catalogue.FindStop("Unknown"));
-    EXPECT_TRUE(empty_buses.empty());
+TEST(TransportCatalogue, FindBusAndStopReturnNullForMissing) {
+    TransportCatalogue tc;
+    EXPECT_EQ(tc.FindStop("nope"), nullptr);
+    EXPECT_EQ(tc.FindBus("nope"), nullptr);
 }
 
 int main(int argc, char** argv) {

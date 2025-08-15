@@ -6,26 +6,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "geo.h"
+#include "domain.h"
 
 namespace transport_catalogue {
-
-    struct Stop {
-        std::string name;
-        geo::Coordinates coordinates;
-    };
-
-    struct Bus {
-        std::string name;
-        std::vector<const Stop*> stops;
-        bool is_roundtrip;
-    };
-
-    struct BusInfo {
-        size_t stops_count = 0;
-        size_t unique_stops_count = 0;
-        double route_length = 0.0;
-    };
 
     struct PtrPairHasher {
         size_t operator()(const std::pair<const void*, const void*>& p) const {
@@ -49,9 +32,6 @@ namespace transport_catalogue {
         // Finds a bus by its name.
         [[nodiscard]] const Bus *FindBus(std::string_view name) const;
 
-        // Gets information about a bus.
-        [[nodiscard]] BusInfo GetBusInfo(std::string_view name) const;
-
         // Returns a list of buses that pass through a given stop.
         [[nodiscard]] const std::unordered_set<const Bus*>& GetBusesForStop(const Stop *stop) const;
 
@@ -60,6 +40,10 @@ namespace transport_catalogue {
 
         // Gets the distance between two stops.
         [[nodiscard]] double GetDistance(const Stop *from, const Stop *to) const;
+
+        // Public accessors for buses and stops
+        [[nodiscard]] const std::deque<Bus>& GetAllBuses() const { return buses_; }
+        [[nodiscard]] const std::deque<Stop>& GetAllStops() const { return stops_; }
 
     private:
         std::unordered_map<std::string_view, const Stop *> stops_index_;

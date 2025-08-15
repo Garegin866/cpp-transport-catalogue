@@ -6,9 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(TransportCatalogueLib
-    src/transport_catalogue.cpp
-    src/input_reader.cpp
-    src/stat_reader.cpp
+        src/geo.cpp
+        src/json_reader.cpp
+        src/json.cpp
+        src/map_renderer.cpp
+        src/request_handler.cpp
+        src/svg.cpp
+        src/transport_catalogue.cpp
 )
 
 target_include_directories(TransportCatalogueLib PUBLIC ${CMAKE_SOURCE_DIR}/include)

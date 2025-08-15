@@ -34,29 +34,6 @@ namespace transport_catalogue {
         return it != buses_index_.end() ? it->second : nullptr;
     }
 
-    [[nodiscard]] BusInfo TransportCatalogue::GetBusInfo(std::string_view name) const {
-        const Bus* bus = FindBus(name);
-        if (!bus) {
-            return {};
-        }
-
-        BusInfo info;
-        info.stops_count = bus->stops.size();
-        info.unique_stops_count = std::unordered_set<const Stop*>(bus->stops.begin(), bus->stops.end()).size();
-
-        for (size_t i = 1; i < bus->stops.size(); ++i) {
-            const Stop* prev_stop = bus->stops[i - 1];
-            const Stop* curr_stop = bus->stops[i];
-            if (prev_stop && curr_stop) {
-                double distance = std::hypot(curr_stop->coordinates.lat - prev_stop->coordinates.lat,
-                                             curr_stop->coordinates.lng - prev_stop->coordinates.lng);
-                info.route_length += distance;
-            }
-        }
-
-        return info;
-    }
-
     [[nodiscard]] const std::unordered_set<const Bus*>& TransportCatalogue::GetBusesForStop(const Stop* stop) const {
         auto it = stop_to_buses_.find(stop);
         if (it != stop_to_buses_.end()) {
