@@ -177,49 +177,53 @@ namespace transport_catalogue::json {
         return Document{LoadNode(input)};
     }
 
+    const std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>& Node::GetValue() const {
+        return *this;
+    }
+
     int Node::AsInt() const {
-        if (!std::holds_alternative<int>(value_)) {
+        if (!std::holds_alternative<int>(*this)) {
             throw std::logic_error("Node is not an int");
         }
-        return std::get<int>(value_);
+        return std::get<int>(*this);
     }
 
     double Node::AsDouble() const {
-        if (std::holds_alternative<int>(value_)) {
-            return static_cast<double>(std::get<int>(value_));
-        } else if (std::holds_alternative<double>(value_)) {
-            return std::get<double>(value_);
+        if (std::holds_alternative<int>(*this)) {
+            return static_cast<double>(std::get<int>(*this));
+        } else if (std::holds_alternative<double>(*this)) {
+            return std::get<double>(*this);
         } else {
             throw std::logic_error("Node is not a double");
         }
     }
 
     bool Node::AsBool() const {
-        if (!std::holds_alternative<bool>(value_)) {
+        if (!std::holds_alternative<bool>(*this)) {
             throw std::logic_error("Node is not a bool");
         }
-        return std::get<bool>(value_);
+        return std::get<bool>(*this);
     }
 
     const std::string& Node::AsString() const {
-        if (!std::holds_alternative<std::string>(value_)) {
+        if (!std::holds_alternative<std::string>(*this)) {
             throw std::logic_error("Node is not a string");
         }
-        return std::get<std::string>(value_);
+        return std::get<std::string>(*this);
     }
 
     const Array& Node::AsArray() const {
-        if (!std::holds_alternative<Array>(value_)) {
+        if (!std::holds_alternative<Array>(*this)) {
             throw std::logic_error("Node is not an array");
         }
-        return std::get<Array>(value_);
+        return std::get<Array>(*this);
     }
 
     const Dict& Node::AsMap() const {
-        if (!std::holds_alternative<Dict>(value_)) {
+        if (!std::holds_alternative<Dict>(*this)) {
             throw std::logic_error("Node is not a map");
         }
-        return std::get<Dict>(value_);
+        return std::get<Dict>(*this);
     }
 
     // === Printing ===
@@ -289,14 +293,6 @@ namespace transport_catalogue::json {
 
     void Print(const Document& doc, ostream& out) {
         PrintNode(doc.GetRoot(), out);
-    }
-
-    bool operator==(const Document& lhs, const Document& rhs) {
-        return lhs.GetRoot() == rhs.GetRoot();
-    }
-
-    bool operator!=(const Document& lhs, const Document& rhs) {
-        return !(lhs == rhs);
     }
 
 }  // namespace transport_catalogue::vjson

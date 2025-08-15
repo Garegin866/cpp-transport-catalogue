@@ -18,43 +18,25 @@ namespace transport_catalogue::json {
         using runtime_error::runtime_error;
     };
 
-    class Node {
+    class Node final : private std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string> {
     public:
-        using Value = std::variant<std::nullptr_t, int, double, bool, std::string, Array, Dict>;
+        using variant::variant;
 
-        Node() : value_(nullptr) {}
-        Node(std::nullptr_t) : value_(nullptr) {}
+        [[nodiscard]] bool IsInt() const { return std::holds_alternative<int>(*this); }
+        [[nodiscard]] bool IsDouble() const { return IsInt() || std::holds_alternative<double>(*this); }
+        [[nodiscard]] bool IsPureDouble() const { return std::holds_alternative<double>(*this); }
+        [[nodiscard]] bool IsBool() const { return std::holds_alternative<bool>(*this); }
+        [[nodiscard]] bool IsString() const { return std::holds_alternative<std::string>(*this); }
+        [[nodiscard]] bool IsArray() const { return std::holds_alternative<Array>(*this); }
+        [[nodiscard]] bool IsMap() const { return std::holds_alternative<Dict>(*this); }
 
-        Node(int v) : value_(v) {}
-        Node(double v) : value_(v) {}
-        Node(bool v) : value_(v) {}
-        Node(const char* v) : value_(std::string(v)) {}
-        Node(std::string v) : value_(std::move(v)) {}
-        Node(Array v) : value_(std::move(v)) {}
-        Node(Dict v) : value_(std::move(v)) {}
-
-        [[nodiscard]] bool IsNull() const { return std::holds_alternative<std::nullptr_t>(value_); }
-        [[nodiscard]] bool IsInt() const { return std::holds_alternative<int>(value_); }
-        [[nodiscard]] bool IsDouble() const { return IsInt() || std::holds_alternative<double>(value_); }
-        [[nodiscard]] bool IsPureDouble() const { return std::holds_alternative<double>(value_); }
-        [[nodiscard]] bool IsBool() const { return std::holds_alternative<bool>(value_); }
-        [[nodiscard]] bool IsString() const { return std::holds_alternative<std::string>(value_); }
-        [[nodiscard]] bool IsArray() const { return std::holds_alternative<Array>(value_); }
-        [[nodiscard]] bool IsMap() const { return std::holds_alternative<Dict>(value_); }
-
-        [[nodiscard]] Value GetValue() const { return value_; }
-        int AsInt() const;
-        double AsDouble() const;
-        bool AsBool() const;
-        const std::string& AsString() const;
-        const Array& AsArray() const;
-        const Dict& AsMap() const;
-
-        bool operator==(const Node& rhs) const { return value_ == rhs.value_; }
-        bool operator!=(const Node& rhs) const { return !(*this == rhs); }
-
-    private:
-        Value value_;
+        [[nodiscard]] const std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>& GetValue() const;
+        [[nodiscard]] int AsInt() const;
+        [[nodiscard]] double AsDouble() const;
+        [[nodiscard]] bool AsBool() const;
+        [[nodiscard]] const std::string& AsString() const;
+        [[nodiscard]] const Array& AsArray() const;
+        [[nodiscard]] const Dict& AsMap() const;
     };
 
     class Document {
