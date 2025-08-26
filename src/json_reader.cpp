@@ -1,6 +1,7 @@
 #include "json_reader.h"
 
 #include "domain.h"
+#include "json_builder.h"
 
 #include <string>
 #include <unordered_set>
@@ -54,7 +55,7 @@ namespace transport_catalogue {
     }
 
     void JsonReader::ReadInput() {
-        const auto& root = input_doc_.GetRoot().AsMap();
+        const auto& root = input_doc_.GetRoot().AsDict();
         if (auto it = root.find(BASE_REQUESTS_KEY); it != root.end() && it->second.IsArray()) {
             ParseBaseRequests(it->second.AsArray());
         }
@@ -98,27 +99,33 @@ namespace transport_catalogue {
             if (req.type == BUS_TYPE) {
                 auto bus_info = handler.GetBusInfo(req.name);
                 if (bus_info) {
-                    response_node = json::Dict{
-                        {"request_id", req.id},
-                        {"curvature", bus_info->curvature},
-                        {"route_length", bus_info->route_length},
-                        {"stop_count", static_cast<int>(bus_info->stops_count)},
-                        {"unique_stop_count", static_cast<int>(bus_info->unique_stops_count)}
-                    };
+                    response_node = json::Builder{}
+                            .StartDict()
+                                .Key("request_id").Value(req.id)
+                                .Key("curvature").Value(bus_info->curvature)
+                                .Key("route_length").Value(bus_info->route_length)
+                                .Key("stop_count").Value(static_cast<int>(bus_info->stops_count))
+                                .Key("unique_stop_count").Value(static_cast<int>(bus_info->unique_stops_count))
+                            .EndDict()
+                            .Build();
                 } else {
-                    response_node = json::Dict{
-                        {"request_id", req.id},
-                        {"error_message", "not found"}
-                    };
+                    response_node = json::Builder{}
+                            .StartDict()
+                                .Key("request_id").Value(req.id)
+                                .Key("error_message").Value("not found")
+                            .EndDict()
+                            .Build().AsDict();
                 }
             } else if (req.type == STOP_TYPE) {
                 json::Array buses_json;
                 auto buses = handler.GetBusesByStop(req.name);
                 if (!buses) {
-                    response_node = json::Dict{
-                        {"request_id", req.id},
-                        {"error_message", "not found"}
-                    };
+                    response_node = json::Builder{}
+                            .StartDict()
+                                .Key("request_id").Value(req.id)
+                                .Key("error_message").Value("not found")
+                            .EndDict()
+                            .Build();
                 } else {
                     std::vector<std::string> names;
                     names.reserve(buses->size());
@@ -133,19 +140,23 @@ namespace transport_catalogue {
                         buses_json.emplace_back(name);
                     }
 
-                    response_node = json::Dict{
-                            {"request_id", req.id},
-                            {"buses",      std::move(buses_json)}
-                    };
+                    response_node = json::Builder{}
+                            .StartDict()
+                                .Key("request_id").Value(req.id)
+                                .Key("buses").Value(std::move(buses_json))
+                            .EndDict()
+                            .Build();
                 }
             } else if (req.type == MAP_TYPE) {
                 std::ostringstream svg_buf;
                 handler.RenderMap().Render(svg_buf);
 
-                response_node = json::Dict{
-                        {"request_id", req.id},
-                        {"map", svg_buf.str()}
-                };
+                response_node = json::Builder{}
+                        .StartDict()
+                            .Key("request_id").Value(req.id)
+                            .Key("map").Value(svg_buf.str())
+                        .EndDict()
+                        .Build();
             }
 
             responses.push_back(std::move(response_node));
@@ -155,11 +166,11 @@ namespace transport_catalogue {
     }
 
     void JsonReader::ProcessRenderSettings(renderer::MapRenderer& renderer) {
-        const auto& root = input_doc_.GetRoot().AsMap();
+        const auto& root = input_doc_.GetRoot().AsDict();
         auto it_rs = root.find(RENDER_SETTINGS_KEY);
         if (it_rs == root.end()) return; // nothing to render
 
-        const auto& rs = it_rs->second.AsMap();
+        const auto& rs = it_rs->second.AsDict();
         renderer::RenderSettings s{};   // have sensible defaults in this struct
 
         if (auto p = TryGet(rs, "width")) {
@@ -212,8 +223,8 @@ namespace transport_catalogue {
 
     void JsonReader::ParseBaseRequests(const json::Array& reqs) {
         for (const auto& node : reqs) {
-            if (!node.IsMap()) continue;
-            const auto& m = node.AsMap();
+            if (!node.IsDict()) continue;
+            const auto& m = node.AsDict();
 
             const auto* type_n = TryGet(m, TYPE_KEY);
             if (!type_n || !type_n->IsString()) continue;
@@ -229,8 +240,8 @@ namespace transport_catalogue {
 
     void JsonReader::ParseStatRequests(const json::Array& reqs) {
         for (const auto& node : reqs) {
-            if (!node.IsMap()) continue;
-            const auto& m = node.AsMap();
+            if (!node.IsDict()) continue;
+            const auto& m = node.AsDict();
 
             StatRequest stat_request;
             if (const auto* type_n = TryGet(m, TYPE_KEY); type_n && type_n->IsString()) {
@@ -259,8 +270,8 @@ namespace transport_catalogue {
         s.name   = name_n->AsString();
         s.coords = { lat_n->AsDouble(), lng_n->AsDouble() };
 
-        if (auto rd_it = dict.find("road_distances"); rd_it != dict.end() && rd_it->second.IsMap()) {
-            for (const auto& [to_name, dist_node] : rd_it->second.AsMap()) {
+        if (auto rd_it = dict.find("road_distances"); rd_it != dict.end() && rd_it->second.IsDict()) {
+            for (const auto& [to_name, dist_node] : rd_it->second.AsDict()) {
                 if (dist_node.IsInt()) {
                     s.road_distances[to_name] = dist_node.AsInt();
                 } else if (dist_node.IsDouble()) {

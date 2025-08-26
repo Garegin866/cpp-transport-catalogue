@@ -13,6 +13,7 @@ add_library(TransportCatalogueLib
         src/request_handler.cpp
         src/svg.cpp
         src/transport_catalogue.cpp
+        src/json_builder.cpp
 )
 
 target_include_directories(TransportCatalogueLib PUBLIC ${CMAKE_SOURCE_DIR}/include)
