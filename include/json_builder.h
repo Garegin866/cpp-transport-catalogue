@@ -11,7 +11,7 @@
 namespace json {
 
     class Builder {
-    public:
+    private:
         class BaseContext;
         class DictContext;
         class KeyContext;
@@ -44,13 +44,7 @@ namespace json {
         std::vector<Context>       context_stack_;
         std::optional<std::string> pending_key_;
 
-    public:
-
-        friend class BaseContext;
-        friend class DictContext;
-        friend class KeyContext;
-        friend class ArrayContext;
-
+    private:
         class BaseContext {
         public:
             explicit BaseContext(Builder& builder) : b_(builder) {}
